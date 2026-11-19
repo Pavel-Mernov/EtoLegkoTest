@@ -4,10 +4,17 @@ const requestCount = 10;
 const timeoutMs = 120_000;
 const [address, ...extraArgs] = process.argv.slice(2);
 
-async function main() {
-  const url = URL.canParse(address) ? new URL(address) : null;
+function errorMessage(error: unknown): string {
+  if (error instanceof Error) {
+    return error.cause instanceof Error ? error.cause.message : error.message;
+  }
+  return String(error);
+}
+
+async function main(): Promise<void> {
+  const url = address ? URL.parse(address) : null;
   if (!url || !['http:', 'https:'].includes(url.protocol) || extraArgs.length) {
-    throw new Error('Использование: node speed-test.mjs "<http:// или https:// URL>"');
+    throw new Error('Использование: node speed-test.mts "<http:// или https:// URL>"');
   }
 
   let totalBytes = 0;
@@ -31,7 +38,7 @@ async function main() {
       }
       totalMs += performance.now() - start;
     } catch (error) {
-      throw new Error(`Запрос ${request} из ${requestCount}: ${error.cause?.message ?? error.message}`);
+      throw new Error(`Запрос ${request} из ${requestCount}: ${errorMessage(error)}`);
     }
   }
 
@@ -42,7 +49,7 @@ async function main() {
   console.log(`Скорость скачивания: ${megabitsPerSecond.toFixed(2)} Мбит/с`);
 }
 
-main().catch((error) => {
-  console.error(error.message);
+main().catch((error: unknown) => {
+  console.error(errorMessage(error));
   process.exitCode = 1;
 });
